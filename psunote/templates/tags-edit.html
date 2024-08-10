@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block body %}
+<h3 class="my-2">Edit Tag</h3>
+<form action="" method="POST">
+  <div class="form-group my-3">
+    <label for="name">Tag Name</label>
+    <input type="text" class="form-control" id="name" name="name" value="{{ tag.name }}">
+  </div>
+  <button type="submit" class="btn btn-primary">Update</button>
+  <form action="{{ url_for('tags_delete', tag_id=tag.id) }}" method="POST" style="display:inline;">
+      <button type="submit" class="btn btn-danger">Delete</button>
+  </form>
+</form>
+{% endblock %}
