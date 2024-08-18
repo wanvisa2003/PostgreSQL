@@ -1,8 +1,7 @@
 from wtforms_sqlalchemy.orm import model_form
 from flask_wtf import FlaskForm
-from wtforms import Field, widgets
+from wtforms import Field, widgets, StringField, TextAreaField
 from wtforms.validators import DataRequired
-from models import Note, Tag, db
 
 import models
 
@@ -31,14 +30,15 @@ class TagListField(Field):
 
     def _value(self):
         if self.data:
-            return ", ".join(self.data)
-        else:
-            return ""
+            return ", ".join(tag.name if isinstance(tag, models.Tag) else tag for tag in self.data)
+        return ""
 
 
 BaseNoteForm = model_form(
     models.Note, base_class=FlaskForm, exclude=["created_date", "updated_date"], db_session=models.db.session
 )
-  
+
+
 class NoteForm(BaseNoteForm):
     tags = TagListField("Tag")
+
