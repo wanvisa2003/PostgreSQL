@@ -1,4 +1,5 @@
 import flask
+
 import models
 import forms
 
@@ -10,7 +11,6 @@ app.config[
 ] = "postgresql://coe:CoEpasswd@localhost:5432/coedb"
 
 models.init_app(app)
-
 
 @app.route("/")
 def index():
@@ -56,6 +56,74 @@ def notes_create():
 
     return flask.redirect(flask.url_for("index"))
 
+@app.route("/notes/<int:note_id>/edit", methods=["GET", "POST"])
+def edit_note(note_id):
+    db = models.db
+    note = db.session.execute(
+        db.select(models.Note).where(models.Note.id == note_id)
+    ).scalars().first()
+
+    if not note:
+        return flask.redirect(flask.url_for("index"))
+
+    form = forms.NoteForm(obj=note)
+
+    if form.validate_on_submit():
+        note.title = form.title.data
+      
+        note.tags.clear()  
+        if isinstance(form.tags.data, str):
+            tag_names = [tag_name.strip() for tag_name in form.tags.data.split(',') if tag_name.strip()]
+        else:
+            tag_names = [tag_name.strip() for tag_name in form.tags.data if tag_name.strip()]
+
+        for tag_name in tag_names:
+            tag = db.session.execute(
+                db.select(models.Tag).where(models.Tag.name == tag_name)
+            ).scalars().first()
+
+            if not tag:
+                tag = models.Tag(name=tag_name)
+                db.session.add(tag)
+
+            note.tags.append(tag)  
+
+        db.session.commit()  
+        return flask.redirect(flask.url_for("index"))
+
+    return flask.render_template("notes-edit.html", form=form, note=note)
+
+@app.route("/notes/<int:note_id>/delete", methods=["POST"])
+def delete_note(note_id):
+    db = models.db
+    note = db.session.execute(
+        db.select(models.Note).where(models.Note.id == note_id)
+    ).scalars().first()
+
+    if note:
+        db.session.delete(note)
+        db.session.commit()
+    
+    return flask.redirect(flask.url_for("index"))
+
+@app.route("/notes/<int:note_id>/tags/<int:tag_id>/delete", methods=["POST"])
+def delete_tag(note_id, tag_id):
+    db = models.db
+    note = db.session.execute(
+        db.select(models.Note).where(models.Note.id == note_id)
+    ).scalars().first()
+
+    tag = db.session.execute(
+        db.select(models.Tag).where(models.Tag.id == tag_id)
+    ).scalars().first()
+
+    if note and tag:
+        if tag in note.tags:
+            note.tags.remove(tag)
+            db.session.commit()
+    
+    return flask.redirect(flask.url_for("edit_note", note_id=note.id))
+
 
 @app.route("/tags/<tag_name>")
 def tags_view(tag_name):
@@ -78,4 +146,3 @@ def tags_view(tag_name):
 
 if __name__ == "__main__":
     app.run(debug=True)
-
